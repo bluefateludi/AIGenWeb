@@ -35,7 +35,7 @@ public class ExitTool extends BaseTool {
     }
 
     @Override
-    public String generateToolExecutedResult(JSONObject arguments) {
+    public String generateToolExecutedDisplay(JSONObject arguments, String executionResult) {
         return "\n\n[执行结束]\n\n";
     }
 }

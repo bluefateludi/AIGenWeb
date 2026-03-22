@@ -32,10 +32,14 @@ public abstract class BaseTool {
     }
 
     /**
-     * 生成工具执行结果格式（保存到数据库）
+     * 生成展示给前端 / 历史消息的工具执行结果
+     * 默认优先使用工具真实执行结果，避免泄漏原始参数。
      *
      * @param arguments 工具执行参数
-     * @return 格式化的工具执行结果
+     * @param executionResult 工具真实执行结果
+     * @return 格式化后的展示内容
      */
-    public abstract String generateToolExecutedResult(JSONObject arguments);
+    public String generateToolExecutedDisplay(JSONObject arguments, String executionResult) {
+        return executionResult == null ? "" : executionResult;
+    }
 } 

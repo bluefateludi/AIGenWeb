@@ -1,6 +1,5 @@
 package com.yupi.yuaicodemother.ai.tools;
 
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.json.JSONObject;
 import com.yupi.yuaicodemother.constant.AppConstant;
 import dev.langchain4j.agent.tool.P;
@@ -69,15 +68,7 @@ public class FileWriteTool extends BaseTool {
     }
 
     @Override
-    public String generateToolExecutedResult(JSONObject arguments) {
-        String relativeFilePath = arguments.getStr("relativeFilePath");
-        String suffix = FileUtil.getSuffix(relativeFilePath);
-        String content = arguments.getStr("content");
-        return String.format("""
-                        [工具调用] %s %s
-                        ```%s
-                        %s
-                        ```
-                        """, getDisplayName(), relativeFilePath, suffix, content);
+    public String generateToolExecutedDisplay(JSONObject arguments, String executionResult) {
+        return executionResult;
     }
 }

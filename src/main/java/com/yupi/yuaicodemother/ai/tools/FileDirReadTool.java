@@ -116,7 +116,7 @@ public class FileDirReadTool extends BaseTool {
     }
 
     @Override
-    public String generateToolExecutedResult(JSONObject arguments) {
+    public String generateToolExecutedDisplay(JSONObject arguments, String executionResult) {
         String relativeDirPath = arguments.getStr("relativeDirPath");
         if (StrUtil.isEmpty(relativeDirPath)) {
             relativeDirPath = "根目录";
