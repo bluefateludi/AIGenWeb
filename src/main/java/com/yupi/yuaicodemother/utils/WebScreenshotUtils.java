@@ -7,7 +7,6 @@ import cn.hutool.core.util.StrUtil;
 import com.yupi.yuaicodemother.exception.BusinessException;
 import com.yupi.yuaicodemother.exception.ErrorCode;
 import io.github.bonigarcia.wdm.WebDriverManager;
-import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.OutputType;
@@ -20,6 +19,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import java.io.File;
 import java.time.Duration;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * 截图工具类
@@ -27,22 +27,10 @@ import java.util.UUID;
 @Slf4j
 public class WebScreenshotUtils {
 
-    private static final WebDriver webDriver;
-
-    // 全局静态初始化，避免重复初始化驱动程序：
-    static {
-        final int DEFAULT_WIDTH = 1600;
-        final int DEFAULT_HEIGHT = 900;
-        webDriver = initChromeDriver(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-    }
-
-    /**
-     * 退出时销毁
-     */
-    @PreDestroy
-    public void destroy() {
-        webDriver.quit();
-    }
+    private static final int DEFAULT_WIDTH = 1600;
+    private static final int DEFAULT_HEIGHT = 900;
+    private static Supplier<WebDriver> webDriverFactory = WebScreenshotUtils::createDefaultWebDriver;
+    private static Supplier<String> chromeDriverPathResolver = WebScreenshotUtils::resolveChromeDriverPath;
 
     /**
      * 生成网页截图
@@ -56,8 +44,10 @@ public class WebScreenshotUtils {
             log.error("网页截图失败，url为空");
             return null;
         }
+        WebDriver webDriver = null;
         // 创建临时目录
         try {
+            webDriver = webDriverFactory.get();
             String rootPath = System.getProperty("user.dir") + "/tmp/screenshots/" + UUID.randomUUID().toString().substring(0, 8);
             FileUtil.mkdir(rootPath);
             // 图片后缀
@@ -84,6 +74,8 @@ public class WebScreenshotUtils {
         } catch (Exception e) {
             log.error("网页截图失败：{}", webUrl, e);
             return null;
+        } finally {
+            closeWebDriver(webDriver);
         }
     }
 
@@ -92,8 +84,7 @@ public class WebScreenshotUtils {
      */
     private static WebDriver initChromeDriver(int width, int height) {
         try {
-            // 自动管理 ChromeDriver
-            WebDriverManager.chromedriver().setup();
+            configureChromeDriver();
             // 配置 Chrome 选项
             ChromeOptions options = new ChromeOptions();
             // 无头模式
@@ -121,6 +112,76 @@ public class WebScreenshotUtils {
             log.error("初始化 Chrome 浏览器失败", e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "初始化 Chrome 浏览器失败");
         }
+    }
+
+    private static WebDriver createDefaultWebDriver() {
+        return initChromeDriver(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    }
+
+    private static void configureChromeDriver() {
+        String currentProperty = System.getProperty("webdriver.chrome.driver");
+        if (isExecutableFile(currentProperty)) {
+            log.info("使用本地 chromedriver：{}", currentProperty);
+            return;
+        }
+        String resolvedChromeDriverPath = chromeDriverPathResolver.get();
+        if (isExecutableFile(resolvedChromeDriverPath)) {
+            System.setProperty("webdriver.chrome.driver", resolvedChromeDriverPath);
+            log.info("使用解析到的本地 chromedriver：{}", resolvedChromeDriverPath);
+            return;
+        }
+        log.info("未找到本地 chromedriver，尝试使用 WebDriverManager 自动解析");
+        WebDriverManager.chromedriver().setup();
+    }
+
+    private static String resolveChromeDriverPath() {
+        String envPath = System.getenv("CHROMEDRIVER_PATH");
+        if (isExecutableFile(envPath)) {
+            return envPath;
+        }
+        String[] candidates = {
+                System.getProperty("user.dir") + "/drivers/chromedriver.exe",
+                System.getProperty("user.dir") + "/tmp/drivers/chromedriver.exe",
+                "C:/Program Files/ChromeDriver/chromedriver.exe",
+                "C:/Program Files (x86)/ChromeDriver/chromedriver.exe"
+        };
+        for (String candidate : candidates) {
+            if (isExecutableFile(candidate)) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isExecutableFile(String path) {
+        return StrUtil.isNotBlank(path) && FileUtil.exist(path) && FileUtil.isFile(path);
+    }
+
+    private static void closeWebDriver(WebDriver webDriver) {
+        if (webDriver == null) {
+            return;
+        }
+        try {
+            webDriver.quit();
+        } catch (Exception e) {
+            log.warn("关闭 ChromeDriver 失败", e);
+        }
+    }
+
+    static void setWebDriverFactoryForTest(Supplier<WebDriver> factory) {
+        webDriverFactory = factory;
+    }
+
+    static void resetWebDriverFactoryForTest() {
+        webDriverFactory = WebScreenshotUtils::createDefaultWebDriver;
+    }
+
+    static void setChromeDriverPathResolverForTest(Supplier<String> resolver) {
+        chromeDriverPathResolver = resolver;
+    }
+
+    static void resetChromeDriverPathResolverForTest() {
+        chromeDriverPathResolver = WebScreenshotUtils::resolveChromeDriverPath;
     }
 
     /**
