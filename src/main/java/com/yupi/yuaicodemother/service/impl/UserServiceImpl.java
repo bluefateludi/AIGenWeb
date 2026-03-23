@@ -14,6 +14,7 @@ import com.yupi.yuaicodemother.model.enums.UserRoleEnum;
 import com.yupi.yuaicodemother.model.vo.LoginUserVO;
 import com.yupi.yuaicodemother.model.vo.UserVO;
 import com.yupi.yuaicodemother.service.UserService;
+import com.yupi.yuaicodemother.utils.UserNameUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
@@ -61,7 +62,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User user = new User();
         user.setUserAccount(userAccount);
         user.setUserPassword(encryptPassword);
-        user.setUserName("无名");
+        user.setUserName(UserNameUtils.resolveDisplayName(null, userAccount));
         user.setUserRole(UserRoleEnum.USER.getValue());
         boolean saveResult = this.save(user);
         if (!saveResult) {
@@ -77,6 +78,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         LoginUserVO loginUserVO = new LoginUserVO();
         BeanUtil.copyProperties(user, loginUserVO);
+        loginUserVO.setUserName(UserNameUtils.resolveDisplayName(user.getUserName(), user.getUserAccount()));
         return loginUserVO;
     }
 
@@ -132,6 +134,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         UserVO userVO = new UserVO();
         BeanUtil.copyProperties(user, userVO);
+        userVO.setUserName(UserNameUtils.resolveDisplayName(user.getUserName(), user.getUserAccount()));
         return userVO;
     }
 
